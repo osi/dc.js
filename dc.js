@@ -279,16 +279,19 @@ dc.utils.GroupStack = function() {
     };
 };
 
-dc.utils.groupMax = function(group, accessor) {
-    return d3.max(group.all(), function(e) {
-        return accessor(e);
-    });
+dc.utils.filteredAll = function(group, filter) {
+    if(filter) {
+        return group.all().filter(filter);
+    }
+    return group.all();
 };
 
-dc.utils.groupMin = function(group, accessor) {
-    return d3.min(group.all(), function(e) {
-        return accessor(e);
-    });
+dc.utils.groupMax = function(group, accessor, filter) {
+    return d3.max(dc.utils.filteredAll(group, filter), accessor);
+};
+
+dc.utils.groupMin = function(group, accessor, filter) {
+    return d3.min(dc.utils.filteredAll(group, filter), accessor);
 };
 
 dc.utils.nameToId = function(name){
@@ -1309,9 +1312,7 @@ dc.stackableChart = function(_chart) {
 
         for (var groupIndex = 0; groupIndex < allGroups.length; ++groupIndex) {
             var group = allGroups[groupIndex];
-            var m = d3.min(group.all(), function(e) {
-                return _chart.getValueAccessorByIndex(groupIndex)(e);
-            });
+            var m = d3.min(group.all(), _chart.getValueAccessorByIndex(groupIndex), d3.functor(true));
             if (m < min) min = m;
         }
 
@@ -1324,7 +1325,7 @@ dc.stackableChart = function(_chart) {
 
         for (var groupIndex = 0; groupIndex < allGroups.length; ++groupIndex) {
             var group = allGroups[groupIndex];
-            max += dc.utils.groupMax(group, _chart.getValueAccessorByIndex(groupIndex));
+            max += dc.utils.groupMax(group, _chart.getValueAccessorByIndex(groupIndex), d3.functor(true));
         }
 
         return dc.utils.add(max, _chart.yAxisPadding());
@@ -1353,7 +1354,9 @@ dc.stackableChart = function(_chart) {
 
         for (var groupIndex = 0; groupIndex < allGroups.length; ++groupIndex) {
             var group = allGroups[groupIndex];
-            var m = dc.utils.groupMin(group, _chart.getKeyAccessorByIndex(groupIndex));
+            var m = dc.utils.groupMin(group, _chart.getKeyAccessorByIndex(groupIndex), function(e) {
+                return _chart.getValueAccessorByIndex(groupIndex)(e) != 0;
+            });
             if (min == null || min > m) min = m;
         }
 
@@ -1366,7 +1369,9 @@ dc.stackableChart = function(_chart) {
 
         for (var groupIndex = 0; groupIndex < allGroups.length; ++groupIndex) {
             var group = allGroups[groupIndex];
-            var m = dc.utils.groupMax(group, _chart.getKeyAccessorByIndex(groupIndex));
+            var m = dc.utils.groupMax(group, _chart.getKeyAccessorByIndex(groupIndex), function(e) {
+                return _chart.getValueAccessorByIndex(groupIndex)(e) != 0;
+            });
             if (max == null || max < m) max = m;
         }
 
